@@ -515,6 +515,9 @@ choice BOARD_TYPE
     config BOARD_TYPE_OTTO_ROBOT
         bool "ottoRobot"
         depends on IDF_TARGET_ESP32S3
+    config BOARD_TYPE_OTTO_PET_CUSTOM
+        bool "Otto pet custom (S3, ST7789 240x240, INMP441+MAX98357, 5 servos, WebSocket)"
+        depends on IDF_TARGET_ESP32S3
     config BOARD_TYPE_ELECTRON_BOT
         bool "electronBot"
         depends on IDF_TARGET_ESP32S3

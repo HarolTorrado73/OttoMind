@@ -1,0 +1,12 @@
+{
+    "target": "esp32s3",
+    "builds": [
+        {
+            "name": "otto-pet-custom",
+            "sdkconfig_append": [
+                "CONFIG_BOARD_TYPE_OTTO_PET_CUSTOM=y",
+                "CONFIG_HTTPD_WS_SUPPORT=y"
+            ]
+        }
+    ]
+}

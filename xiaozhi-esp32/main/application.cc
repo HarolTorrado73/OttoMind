@@ -10,6 +10,9 @@
 #include "assets.h"
 #include "settings.h"
 #include "behavior.h"
+#if CONFIG_BOARD_TYPE_OTTO_PET_CUSTOM
+#include "boards/otto-pet-custom/config.h"
+#endif
 
 #include <cstring>
 #include <esp_log.h>
@@ -58,13 +61,13 @@ void OttoReactionCallback(const char* reaction) {
 }
 
 void InitOttoPetModules() {
-#if CONFIG_IDF_TARGET_ESP32S3
+#if CONFIG_BOARD_TYPE_OTTO_PET_CUSTOM && CONFIG_IDF_TARGET_ESP32S3
     const otto_servo_config_t servo_map[OTTO_SERVO_COUNT] = {
-        {.gpio_num = GPIO_NUM_4, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
-        {.gpio_num = GPIO_NUM_5, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = true},
-        {.gpio_num = GPIO_NUM_6, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
-        {.gpio_num = GPIO_NUM_7, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = true},
-        {.gpio_num = GPIO_NUM_15, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
+        {.gpio_num = OTTO_SERVO_GPIO_FRONT_LEFT, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
+        {.gpio_num = OTTO_SERVO_GPIO_FRONT_RIGHT, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = true},
+        {.gpio_num = OTTO_SERVO_GPIO_REAR_LEFT, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
+        {.gpio_num = OTTO_SERVO_GPIO_REAR_RIGHT, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = true},
+        {.gpio_num = OTTO_SERVO_GPIO_TAIL, .min_angle = 0, .max_angle = 180, .neutral_angle = 90, .invert = false},
     };
 
     behavior_set_callbacks(OttoEmotionCallback, OttoReactionCallback);
@@ -216,8 +219,20 @@ void Application::Initialize() {
         }
     });
 
-    // Start network asynchronously
-    board.StartNetwork();
+    // WiFi init (esp_wifi_init, etc.) uses a deep call stack. Running it here still uses the
+    // main task stack after a long Initialize(); that can overflow CONFIG_ESP_MAIN_TASK_STACK_SIZE
+    // and corrupt state, often ending in TG1WDT_SYS_RST. Run network start on its own stack.
+    const BaseType_t net_ok =
+        xTaskCreate([](void* /*arg*/) {
+            vTaskDelay(pdMS_TO_TICKS(20));
+            Board::GetInstance().StartNetwork();
+            vTaskDelete(nullptr);
+        },
+                    "net_init", 12288, nullptr, 5, nullptr);
+    if (net_ok != pdPASS) {
+        ESP_LOGE(TAG, "net_init task failed, starting network on main task");
+        board.StartNetwork();
+    }
 
     // Update the status bar immediately to show the network state
     display->UpdateStatusBar(true);

@@ -959,4 +959,39 @@ menu "TAIJIPAI_S3_CONFIG"
         启动双声道
 endmenu
 
+menu "Otto pet behavior (FSM)"
+    help
+        Timing and animation tuning for the modular Otto pet state machine (main/otto_pet).
+
+    config OTTO_THINKING_TIME_MIN_MS
+        int "Minimum THINKING state duration (ms)"
+        range 100 20000
+        default 700
+        help
+            Lower bound for the random delay before leaving THINKING toward the resolved emotion.
+
+    config OTTO_THINKING_TIME_MAX_MS
+        int "Maximum THINKING state duration (ms)"
+        range 200 30000
+        default 1800
+        help
+            Upper bound for the random THINKING duration. Should be >= minimum; if misconfigured,
+            the firmware will swap min/max at runtime.
+
+    config OTTO_IDLE_TIMEOUT_MS
+        int "Inactivity timeout before returning to IDLE (ms)"
+        range 500 120000
+        default 7000
+        help
+            When not in IDLE, this one-shot timer is refreshed on each state change. When it
+            fires, the pet returns to IDLE and mood drifts downward slightly.
+
+    config OTTO_ANIMATION_INTERVAL_MS
+        int "Animation task period (ms)"
+        range 20 200
+        default 80
+        help
+            How often servo poses are updated. Lower values feel snappier but use more CPU.
+endmenu
+
 endmenu

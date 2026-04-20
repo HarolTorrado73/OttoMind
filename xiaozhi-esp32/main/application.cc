@@ -37,6 +37,9 @@ void OttoReactionCallback(const char* reaction) {
     if (reaction == nullptr) {
         return;
     }
+    if (strcmp(reaction, "thinking") == 0 || strcmp(reaction, "curious") == 0) {
+        return;
+    }
     auto& app = Application::GetInstance();
     std::string sound;
     if (strcmp(reaction, "happy") == 0 || strcmp(reaction, "excited") == 0) {

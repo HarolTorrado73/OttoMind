@@ -16,7 +16,7 @@ Este apartado es un **procedimiento repetible**: mismo orden, mismas comprobacio
 | Red | Conexión típica | Nota |
 |-----|-----------------|------|
 | 3V3 | 3V3 del módulo ESP → VCC de INMP441, MAX98357A, ST7789 (según breakout) | No alimentes MG90S desde 3V3. |
-| 5 V servos | **5 V dedicado a servos** (no hace falta una fuente de banco “grande”) | Ver apartado siguiente: basta con algo **pequeño** o compartir el **5 V del USB** si tu placa lo expone y da margen de corriente. |
+| 5 V servos | **5 V con corriente adecuada** (USB, batería+MT3608, etc.) | Ver apartado siguiente: USB de pared, **LiPo 1S + elevador MT3608**, o buck desde VBUS. |
 | GND | Bus común: ESP ↔ audio ↔ LCD ↔ servos ↔ retorno del mismo rail que alimenta los servos | Sin masa común, fallos intermitentes y reinicios. |
 
 #### Proyecto compacto: qué hacer si no quieres un bloque de alimentación voluminoso
@@ -29,7 +29,24 @@ Opciones **pequeñas** (elige una según tu caja):
 2. **Módulo step-down mini** (tipo buck en PCB de 2×2 cm) desde el mismo 5 V USB hacia un bus corto “solo servos”: ocupa poco y desacopla picos de los servos del rail que ve el regulador de la ESP.
 3. **Solo USB al PC**: suele limitar a **~500 mA**; con pantalla + WiFi + audio ya queda poco margen. Con **uno o dos** microservos y **carga mecánica mínima** a veces basta para prototipo; con **cinco MG90S** en movimiento realista es fácil el brownout. Si insistes en este modo: mueve servos de **uno en uno** en pruebas, reduce velocidad/carga en mecánica y asume que puede ser inestable.
 
-En resumen: no necesitas una fuente “de laboratorio grande”; sí necesitas **5 V con corriente suficiente y GND común**. Si todo va alimentado solo por un cable USB fino desde el portátil, el cuello de botella es **amperaje**, no el tamaño de una fuente externa.
+4. **Batería Li-ion / LiPo (1S) + módulo elevador MT3608** (u otro boost ajustable): encaja muy bien en un cuerpo pequeño; la electrónica es la habitual en portátiles / wearables.
+
+   | Bloque | Función |
+   |--------|---------|
+   | Celda 1S | Tensión nominal ~3,7 V; operativa aprox. **3,0 V–4,2 V** (descarga ↔ carga completa). |
+   | **Protección BMS** (p. ej. DW01 + MOSFET en placa “18650 con protección”) | Corta sobredescarga y sobrecorriente; **no** omitas en LiPo suelta. |
+   | **Carga** (TP4056, IP5306, etc.) | Solo con celda protegida o módulo que ya integre protección; respeta corriente de carga recomendada por el fabricante de la celda. |
+   | **MT3608** (boost) | Entrada desde el **+ de la batería** (tras BMS si aplica); salida regulada típicamente a **5,0–5,2 V** para bus de servos y, si tu placa lo admite, al pin **5 V / VIN** del devkit para que el LDO interno siga alimentando la ESP a 3V3. |
+   | **GND** | Negativo de celda = GND del MT3608 = GND de la ESP = GND de servos y periféricos. |
+
+   **Consideraciones de diseño:**
+
+   - El MT3608 es **elevador** (Vout > Vin aprox.); con la celda alta (~4,1 V) sigue funcionando si ajustas bien la salida; cerca del **corte por bajo** (~3,3 V) el boost exige más corriente de entrada para el mismo wattio salida → más calor y más caída; conviene **parar servos agresivos** o avisar batería baja por software si un día lo cableas.
+   - Corriente: los módulos MT3608 de mercado suelen anunciarse ~**2 A** salida con **asterisco** (inductor, disipación, entrada baja). Cinco MG90S en **stall simultáneo** pueden pedir mucho más; en robot reducido suele bastar con **no bloquear todos a la vez** y mecánica ligera, o repartir en el tiempo los picos.
+   - **Ruido conmutado**: el boost genera ripple; mantén **condensadores** en la salida del módulo y trazos cortos; el audio I2S es sensible a masa sucia → estrella de GND y retornos cortos ayudan.
+   - **USB y batería a la vez**: si quieres cargar mientras usas el aparato, usa un esquema con **gestión de fuente** (idealmente un PMIC o módulo “charge+boost” documentado) para no poner 5 V USB en paralelo ingenuo con la celda.
+
+En resumen: no necesitas una fuente “de laboratorio grande”; necesitas **5 V (o 3V3 estable para la ESP) con corriente suficiente, GND común y protección de batería** si vas por LiPo. El **MT3608** es una opción razonable y compacta para subir 1S → 5 V para servos y alimentación de placa.
 
 ### INMP441 (micrófono I2S)
 

@@ -15,9 +15,21 @@ Este apartado es un **procedimiento repetible**: mismo orden, mismas comprobacio
 
 | Red | Conexión típica | Nota |
 |-----|-----------------|------|
-| 3V3 | 3V3 del módulo ESP → VCC de INMP441, MAX98357A, ST7789 (según breakout) | No alimentes el conjunto de servos desde este rail. |
-| 5 V | **Fuente externa** 5 V → **V+** de cada servo (bus común MG90S) | El **GND** de esa fuente debe unirse al **GND de la ESP**. |
-| GND | Bus común: ESP ↔ audio ↔ LCD ↔ servos ↔ negativo 5 V | Sin esto, I2S y WiFi degradan o la ESP reinicia. |
+| 3V3 | 3V3 del módulo ESP → VCC de INMP441, MAX98357A, ST7789 (según breakout) | No alimentes MG90S desde 3V3. |
+| 5 V servos | **5 V dedicado a servos** (no hace falta una fuente de banco “grande”) | Ver apartado siguiente: basta con algo **pequeño** o compartir el **5 V del USB** si tu placa lo expone y da margen de corriente. |
+| GND | Bus común: ESP ↔ audio ↔ LCD ↔ servos ↔ retorno del mismo rail que alimenta los servos | Sin masa común, fallos intermitentes y reinicios. |
+
+#### Proyecto compacto: qué hacer si no quieres un bloque de alimentación voluminoso
+
+Lo que se evita no es “tener 5 V”, sino **intentar mover varios MG90S solo con el 3V3 o el LDO de la ESP** (eso sí rompe el proyecto pequeño por resets y calor).
+
+Opciones **pequeñas** (elige una según tu caja):
+
+1. **Cargador USB de pared** (cubo pequeño) + cable USB a la placa: si tu PCB o módulo entrega **5 V del bus USB** a un pad `VBUS`/`5V` y la corriente nominal del cargador es holgada (p. ej. ≥ 2 A), muchos montajes alimentan **servos en ese mismo 5 V** y la ESP por el regulador de la placa, con **GND común**. Sigue siendo “una sola fuente”, no un segundo transformador en mesa.
+2. **Módulo step-down mini** (tipo buck en PCB de 2×2 cm) desde el mismo 5 V USB hacia un bus corto “solo servos”: ocupa poco y desacopla picos de los servos del rail que ve el regulador de la ESP.
+3. **Solo USB al PC**: suele limitar a **~500 mA**; con pantalla + WiFi + audio ya queda poco margen. Con **uno o dos** microservos y **carga mecánica mínima** a veces basta para prototipo; con **cinco MG90S** en movimiento realista es fácil el brownout. Si insistes en este modo: mueve servos de **uno en uno** en pruebas, reduce velocidad/carga en mecánica y asume que puede ser inestable.
+
+En resumen: no necesitas una fuente “de laboratorio grande”; sí necesitas **5 V con corriente suficiente y GND común**. Si todo va alimentado solo por un cable USB fino desde el portátil, el cuello de botella es **amperaje**, no el tamaño de una fuente externa.
 
 ### INMP441 (micrófono I2S)
 
@@ -59,7 +71,7 @@ Añade **3V3**, **GND** y, si aplica, **BL** o `LED` al pin de backlight indicad
 | LED     | **48** |
 | BOOT    | **0** |
 
-### Servos MG90S (PWM; **5 V y GND en bus externo**)
+### Servos MG90S (PWM; **5 V + GND en bus común**, ver alimentación arriba)
 
 Orden en firmware `servo_map`: *front_left, front_right, rear_left, rear_right, tail*.
 
@@ -95,7 +107,7 @@ Cada servo: **señal** → GPIO de la tabla; **V+** → 5 V común; **GND** → 
 | Servos | **5 V** en bus de servo; **no** alimentar MG90S desde el regulador 3V3 de la placa de desarrollo | Picos de arranque y stall superan con holgura lo que el LDO de la ESP puede entregar sin caída de tensión. |
 | Nivel lógico PWM | Señal **3,3 V** desde GPIO hacia entrada del servo (típico en hobby) | Compatible con umbrales CMOS del driver del servo; evitar 5 V en GPIO no tolerantes. |
 | PSRAM / bus octal | Evitar GPIO **~26–37** para PWM o cargas agresivas en módulos con memoria externa multiplexada | Esas líneas suelen ir al interface SPI/OPI; interferencia eléctrica o uso incorrecto compromete estabilidad de memoria y puede dañar periféricos. |
-| USB | Mantener alimentación USB dentro de especificación durante pruebas | Brownout bajo carga simultánea (pantalla + WiFi + audio) ya se ve en campo; servos deben estar en rail **externo**. |
+| USB | Cargador o cable con **corriente suficiente** si compartes 5 V con servos | Brownout si el conjunto supera lo que entrega el puerto o el polyfuse; preferir **cargador de pared ≥ 2 A** antes que USB de portátil para cinco MG90S. |
 
 ---
 

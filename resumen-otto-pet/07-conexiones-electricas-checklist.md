@@ -1,9 +1,79 @@
 # 7. Interconexión eléctrica y bring-up
 
 **Alcance:** placa lógica **otto-pet-custom** (ESP32-S3, PSRAM octal, ST7789 240×240, INMP441 + MAX98357A simplex, cinco servos).  
-**Fuente de verdad de señales:** `main/boards/otto-pet-custom/config.h` (GPIO frente a firmware).
+**Fuente de verdad de señales:** `xiaozhi-esp32/main/boards/otto-pet-custom/config.h` (GPIO frente a firmware).
 
 Este apartado es un **procedimiento repetible**: mismo orden, mismas comprobaciones, cada vez que cambies cableado o revisión de hardware.
+
+---
+
+## Conexiones — mapeo GPIO (tabla de cableado)
+
+> Si el archivo se ve “vacío” en el visor, **ábrelo como texto** (`Ctrl+Shift+V` / vista sin preview) o en otro editor: algunos visores de Markdown no pintan tablas o dejan el bloque `mermaid` en blanco.
+
+### Alimentación y masa
+
+| Red | Conexión típica | Nota |
+|-----|-----------------|------|
+| 3V3 | 3V3 del módulo ESP → VCC de INMP441, MAX98357A, ST7789 (según breakout) | No alimentes el conjunto de servos desde este rail. |
+| 5 V | **Fuente externa** 5 V → **V+** de cada servo (bus común MG90S) | El **GND** de esa fuente debe unirse al **GND de la ESP**. |
+| GND | Bus común: ESP ↔ audio ↔ LCD ↔ servos ↔ negativo 5 V | Sin esto, I2S y WiFi degradan o la ESP reinicia. |
+
+### INMP441 (micrófono I2S)
+
+| Función (firmware) | GPIO ESP32-S3 | Nombres habituales en breakout |
+|--------------------|---------------|--------------------------------|
+| WS / LRCK         | **4**         | WS, L/R, LRCLK |
+| SCK / BCLK        | **5**         | SCK, BCLK |
+| Datos mic → ESP   | **6**         | SD, DOUT, DATA |
+
+Añade **3V3** y **GND** del INMP441 según el silkscreen del módulo.
+
+### MAX98357A (altavoz I2S)
+
+| Función (firmware) | GPIO ESP32-S3 | Nombres habituales en breakout |
+|--------------------|---------------|--------------------------------|
+| BCLK              | **9**         | BCLK |
+| LRCLK             | **8**         | LRC, LRCLK, WS |
+| Datos ESP → DAC   | **7**         | DIN |
+
+Añade **3V3**, **GND** y, si el módulo lo trae, **GAIN** a tierra o V según el volumen deseado (datasheet del breakout).
+
+### Pantalla ST7789 240×240 (SPI3 en firmware)
+
+| Función | GPIO ESP32-S3 |
+|---------|---------------|
+| MOSI    | **13** |
+| CLK     | **12** |
+| DC      | **11** |
+| RST     | **10** |
+| CS      | **14** |
+| Backlight | **15** |
+
+Añade **3V3**, **GND** y, si aplica, **BL** o `LED` al pin de backlight indicado.
+
+### LED y botón (placa)
+
+| Función | GPIO |
+|---------|------|
+| LED     | **48** |
+| BOOT    | **0** |
+
+### Servos MG90S (PWM; **5 V y GND en bus externo**)
+
+Orden en firmware `servo_map`: *front_left, front_right, rear_left, rear_right, tail*.
+
+| Eje / rol      | Señal PWM (GPIO) |
+|----------------|------------------|
+| Front left     | **17** |
+| Front right    | **21** |
+| Rear left      | **18** |
+| Rear right     | **47** |
+| Tail           | **16** |
+
+Cada servo: **señal** → GPIO de la tabla; **V+** → 5 V común; **GND** → GND común (misma estrella que la ESP).
+
+**UART consola (ESP32-S3):** en muchos módulos los pines **43 / 44** son el USB-Serial/JTAG del log. No los reasignes a periféricos si usas ese monitor; en esta `config.h` no se usan para LCD/audio/servos.
 
 ---
 
